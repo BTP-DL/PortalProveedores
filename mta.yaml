@@ -1,0 +1,99 @@
+_schema-version: "3.2"
+ID: simplot-portalsqas
+description: A Fiori application.
+version: 0.0.2
+modules:
+- name: simplot-portalsqas-dest-content
+  type: com.sap.application.content
+  requires:
+  - name: simplot-portalsqas-dest-srv
+    parameters:
+      content-target: true
+  - name: simplot-portalsqas-repo-host
+    parameters:
+      service-key:
+        name: simplot-portalsqas-repo-host-key
+  - name: simplot-portalsqas-uaa
+    parameters:
+      service-key:
+        name: simplot-portalsqas-uaa-key
+  parameters:
+    content:
+      instance:
+        destinations:
+        - Name: simplot-portalsqas_repo_host
+          ServiceInstanceName: simplot-portalsqas-html5-srv
+          ServiceKeyName: simplot-portalsqas-repo-host-key
+          sap.cloud.service: simplot-portalsqas
+        - Authentication: OAuth2UserTokenExchange
+          Name: simplot-portalsqas_uaa
+          ServiceInstanceName: simplot-portalsqas-xsuaa-srv
+          ServiceKeyName: simplot-portalsqas-uaa-key
+          sap.cloud.service: simplot-portalsqas
+        existing_destinations_policy: ignore
+  build-parameters:
+    no-source: true
+- name: simplot-portalsqas-app-content
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: simplot-portalsqas-repo-host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - simplotportalsqas.zip
+      name: simplotportalsqas
+      target-path: resources/
+- name: simplotportalsqas
+  type: html5
+  path: .
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: simplot-portalsqas-dest-srv
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      init_data:
+        instance:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          existing_destinations_policy: update
+      version: 1.0.0
+    service: destination
+    service-name: simplot-portalsqas-dest-srv
+    service-plan: lite
+- name: simplot-portalsqas-uaa
+  type: org.cloudfoundry.managed-service
+  parameters:
+    path: ./xs-security.json
+    service: xsuaa
+    service-name: simplot-portalsqas-xsuaa-srv
+    service-plan: application
+- name: simplot-portalsqas-repo-host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: simplot-portalsqas-html5-srv
+    service-plan: app-host
+- name: my-destination
+  parameters:
+    service-plan: lite
+    service: destination
+  type: org.cloudfoundry.managed-service
+parameters:
+  deploy_mode: html5-repo
+  enable-parallel-deployments: true
